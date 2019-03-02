@@ -3,7 +3,7 @@
 #
 #    Copyright 2014,2018 Mario Gomez <mario.gomez@teubi.co>
 #
-#    This file is part of 
+#    This file is part of MFRC522-Python
 #    MFRC522-Python is a simple Python implementation for
 #    the MFRC522 NFC Card Reader for the Raspberry Pi.
 #
@@ -21,7 +21,6 @@
 #    along with MFRC522-Python.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from pyA20.spi import spi
 import MFRC522
 import signal
 
@@ -39,17 +38,12 @@ def end_read(signal, frame):
 signal.signal(signal.SIGINT, end_read)
 
 # Create an object of the class MFRC522
-MIFAREReader = MFRC522.MFRC522(0,0)
+MIFAREReader = MFRC522.MFRC522(0, 0)
 
-# Welcome message
-print("Welcome to the MFRC522 data read example")
-print("Press Ctrl-C to stop.")
-
-# continue_reading = False
 # This loop keeps checking for chips. If one is near it will get the UID and authenticate
 while continue_reading:
 
-    # Scan for cards    
+    # Scan for cards
     (status, TagType) = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
 
     # If a card is found
@@ -57,7 +51,7 @@ while continue_reading:
         print("Card detected")
 
     # Get the UID of the card
-    (status, uid) = MIFAREReader.MFRC522_Anticoll()
+    (status, uid) = MIFAREReader.MFRC522_Anticoll(1)
 
     # If we have the UID, continue
     if status == MIFAREReader.MI_OK:
@@ -70,15 +64,56 @@ while continue_reading:
 
         # Select the scanned tag
         MIFAREReader.MFRC522_SelectTag(uid)
-        # MIFAREReader.MFRC522_SAK(uid)
 
         # Authenticate
-        # status = MIFAREReader.MFRC522_Auth(MIFAREReader.PICC_AUTHENT1A, 7, key, uid)
+        status = MIFAREReader.MI_OK
+            #MIFAREReader.MFRC522_Auth(MIFAREReader.PICC_AUTHENT1A, 8, key, uid)
+        print("\n")
 
         # Check if authenticated
-        # if status == MIFAREReader.MI_OK:
+        if status == MIFAREReader.MI_OK:
 
-        MIFAREReader.MFRC522_DumpUltralight(uid)
-        MIFAREReader.MFRC522_StopCrypto1()
-        # else:
-        #     print("Authentication error")
+            # Variable for the data to write
+            data = []
+
+            # Fill the data with 0xFF
+            for x in range(0, 16):
+                data.append(x+2)
+
+            print("Sector 2 looked like this:")
+            # Read block 8
+            MIFAREReader.MFRC522_Read(4)
+            print("\n")
+
+            print("Sector 2 will now be filled with 0xFF:")
+            # Write the data
+            MIFAREReader.MFRC522_Write(4, data)
+            print("\n")
+
+            print("It now looks like this:")
+            # Check to see if it was written
+            MIFAREReader.MFRC522_Read(4)
+            print("\n")
+
+            data = []
+            # Fill the data with 0x00
+            for x in range(0, 16):
+                data.append(x)
+
+            print("Now we fill it with some data:")
+            MIFAREReader.MFRC522_Write(4, data)
+            print("\n")
+
+            print("It is now empty:")
+            # Check to see if it was written
+            MIFAREReader.MFRC522_Read(4)
+            print("\n")
+
+            # Stop
+            MIFAREReader.MFRC522_StopCrypto1()
+
+            # Make sure to stop reading for cards
+            continue_reading = False
+        else:
+            print
+            "Authentication error"
